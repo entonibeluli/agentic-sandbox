@@ -23,6 +23,14 @@ export class ValidationError extends Error {
 }
 
 const CYCLES: Cycle[] = ["WLTC", "NEDC", "RDE"];
+const STATUSES: RunStatus[] = ["planned", "running", "done"];
+
+export function validateRunStatus(input: unknown): RunStatus {
+  if (!STATUSES.includes(input as RunStatus)) {
+    throw new ValidationError([`status must be one of ${STATUSES.join("|")}`]);
+  }
+  return input as RunStatus;
+}
 
 export function validateNewRun(input: unknown): NewRun {
   const details: string[] = [];
@@ -61,6 +69,25 @@ export class RunStore {
 
   get(id: string): MeasurementRun | undefined {
     return this.runs.get(id);
+  }
+
+  updateStatus(
+    id: string,
+    to: RunStatus,
+  ):
+    | { kind: "not_found" }
+    | { kind: "invalid_transition"; from: RunStatus; to: RunStatus }
+    | { kind: "updated"; run: MeasurementRun } {
+    const run = this.runs.get(id);
+    if (!run) return { kind: "not_found" };
+
+    const allowed =
+      (run.status === "planned" && to === "running") ||
+      (run.status === "running" && to === "done");
+    if (!allowed) return { kind: "invalid_transition", from: run.status, to };
+
+    run.status = to;
+    return { kind: "updated", run };
   }
 
   create(input: NewRun): MeasurementRun {
