@@ -64,4 +64,20 @@ describe("runs api", () => {
     expect(res.status).toBe(400);
     expect(res.body.details).toHaveLength(3);
   });
+
+  it("rejects impossible CO2 values outside 0 to 500 and accepts the boundaries", async () => {
+    const below = await request(app).post("/api/runs").send({ vehicleId: "WVW-9000", cycle: "WLTC", co2GramsPerKm: -5 });
+    expect(below.status).toBe(400);
+    expect(below.body.details).toContain("co2GramsPerKm must be between 0 and 500");
+
+    const above = await request(app).post("/api/runs").send({ vehicleId: "WVW-9001", cycle: "WLTC", co2GramsPerKm: 9999 });
+    expect(above.status).toBe(400);
+    expect(above.body.details).toContain("co2GramsPerKm must be between 0 and 500");
+
+    const min = await request(app).post("/api/runs").send({ vehicleId: "WVW-9002", cycle: "WLTC", co2GramsPerKm: 0 });
+    expect(min.status).toBe(201);
+
+    const max = await request(app).post("/api/runs").send({ vehicleId: "WVW-9003", cycle: "WLTC", co2GramsPerKm: 500 });
+    expect(max.status).toBe(201);
+  });
 });
