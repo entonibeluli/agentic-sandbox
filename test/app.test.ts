@@ -50,6 +50,34 @@ describe("runs api", () => {
     expect(res.status).toBe(404);
   });
 
+  it("deletes a run and removes it from the list", async () => {
+    const deleted = await request(app).delete("/api/runs/run-0001");
+    expect(deleted.status).toBe(204);
+
+    const all = await request(app).get("/api/runs");
+    expect(all.body).toHaveLength(SEED_RUNS.length - 1);
+    expect(all.body.some((run: { id: string }) => run.id === "run-0001")).toBe(false);
+  });
+
+  it("returns 404 when deleting an unknown run", async () => {
+    const res = await request(app).delete("/api/runs/run-9999");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "run not found", id: "run-9999" });
+  });
+
+  it("does not delete a run that is in progress", async () => {
+    const store = new RunStore(SEED_RUNS);
+    const runningRun = store.get("run-0001");
+    if (!runningRun) throw new Error("seeded run not found");
+    runningRun.status = "running";
+    const runningApp = createApp({ config: loadConfig({ PORT: "0" }), store });
+
+    const res = await request(runningApp).delete("/api/runs/run-0001");
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ error: "run is in progress", id: "run-0001" });
+    expect(store.get("run-0001")).toBeDefined();
+  });
+
   it("creates a run", async () => {
     const res = await request(app)
       .post("/api/runs")
