@@ -62,6 +62,15 @@ Every variable the app reads is declared in `src/config.ts` and provided by `k8s
 | `METRICS_ENABLED` | `false` | no | `true` enables a plain-text metrics listener |
 | `METRICS_PORT` | none | when `METRICS_ENABLED=true` | must differ from `PORT`; the process exits at startup if missing |
 
+## Metrics
+
+The Kubernetes deployment enables the plain-text metrics listener on the `metrics` service port (9100). To reach it locally:
+
+```
+kubectl port-forward service/sandbox-app 9100:metrics
+curl http://localhost:9100/
+```
+
 ## How the pipeline works
 
 `.github/workflows/ci.yml` runs two jobs on every push and pull request:
